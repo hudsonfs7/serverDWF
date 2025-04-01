@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor DXF para KML - Zona 24S</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --primary-hover: #2980b9;
+            --success-color: #2ecc71;
+            --warning-color: #f39c12;
+            --error-color: #e74c3c;
+            --dark-color: #2c3e50;
+            --light-color: #ecf0f1;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            color: var(--dark-color);
+            margin-bottom: 0.5rem;
+        }
+        
+        .description {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+        
+        .converter-container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .info-box {
+            background-color: #d4e6f1;
+            border-left: 4px solid var(--primary-color);
+            padding: 1rem;
+            margin-bottom: 2rem;
+            border-radius: 4px;
+        }
+        
+        .warning {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .upload-area {
+            border: 2px dashed #bdc3c7;
+            border-radius: 5px;
+            padding: 3rem 2rem;
+            text-align: center;
+            margin: 2rem 0;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .upload-area:hover, .upload-area.drag-over {
+            border-color: var(--primary-color);
+            background-color: rgba(52, 152, 219, 0.05);
+        }
+        
+        .upload-area p {
+            color: #7f8c8d;
+            margin-bottom: 1rem;
+        }
+        
+        .file-input {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+        
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            font-size: 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            display: inline-block;
+        }
+        
+        .btn:hover {
+            background-color: var(--primary-hover);
+        }
+        
+        .btn-convert {
+            width: 100%;
+            margin-top: 1rem;
+            font-weight: bold;
+            display: none;
+        }
+        
+        .file-info {
+            display: none;
+            background-color: var(--light-color);
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+        
+        .progress-container {
+            display: none;
+            margin: 2rem 0;
+        }
+        
+        .progress-bar {
+            height: 10px;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+        
+        .progress {
+            height: 100%;
+            background-color: var(--primary-color);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .status {
+            text-align: center;
+            margin: 1rem 0;
+            font-weight: bold;
+        }
+        
+        .status.error {
+            color: var(--error-color);
+        }
+        
+        .status.success {
+            color: var(--success-color);
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 2rem;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        
+        .features {
+            display: flex;
+            justify-content: space-between;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+        
+        .feature {
+            flex-basis: 30%;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+        
+        .loading-spinner {
+            display: none;
+            width: 40px;
+            height: 40px;
+            margin: 1rem auto;
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .feature {
+                flex-basis: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Conversor DXF para KML</h1>
+            <p class="description">Converta seus arquivos DXF para o formato KML com facilidade</p>
+        </header>
+        
+        <div class="converter-container">
+            <div class="info-box">
+                <p><span class="warning">Atenção:</span> Este conversor está configurado exclusivamente para a <strong>Zona 24S</strong>. Certifique-se de que seus dados estão nessa projeção para obter resultados precisos.</p>
+            </div>
+            
+            <div class="upload-area" id="uploadArea">
+                <p>Arraste e solte seu arquivo DXF aqui ou clique para selecionar</p>
+                <i class="feature-icon">📁</i>
+                <input type="file" id="fileInput" class="file-input" accept=".dxf">
+            </div>
+            
+            <div class="file-info" id="fileInfo">
+                <p><strong>Arquivo selecionado:</strong> <span id="fileName">-</span></p>
+                <p><strong>Tamanho:</strong> <span id="fileSize">-</span></p>
+            </div>
+            
+            <button class="btn btn-convert" id="convertBtn">Converter para KML</button>
+            
+            <div class="progress-container" id="progressContainer">
+                <p>Convertendo seu arquivo...</p>
+                <div class="progress-bar">
+                    <div class="progress" id="progressBar"></div>
+                </div>
+                <div class="loading-spinner" id="spinner"></div>
+            </div>
+            
+            <div class="status" id="status"></div>
+        </div>
+        
+        <div class="features">
+            <div class="feature">
+                <i class="feature-icon">🚀</i>
+                <h3>Rápido e Eficiente</h3>
+                <p>Conversão otimizada para arquivos DXF de qualquer tamanho</p>
+            </div>
+            <div class="feature">
+                <i class="feature-icon">🔒</i>
+                <h3>Seguro</h3>
+                <p>Seus arquivos são processados com segurança e não são armazenados permanentemente</p>
+            </div>
+            <div class="feature">
+                <i class="feature-icon">📌</i>
+                <h3>Zona 24S</h3>
+                <p>Especializado para conversão na projeção UTM Zona 24S</p>
+            </div>
+        </div>
+        
+        <footer>
+            <p>© 2025 Conversor DXF para KML | Todos os direitos reservados</p>
+        </footer>
+    </div>
+    
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const convertBtn = document.getElementById('convertBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const status = document.getElementById('status');
+        const spinner = document.getElementById('spinner');
+        
+        // Drag and Drop functionality
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('drag-over');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('drag-over');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+            
+            if (e.dataTransfer.files.length) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                handleFile(e.target.files[0]);
+            }
+        });
+        
+        function handleFile(file) {
+            // Check if file is DXF
+            if (!file.name.toLowerCase().endsWith('.dxf')) {
+                status.textContent = 'Erro: Por favor, selecione apenas arquivos DXF.';
+                status.className = 'status error';
+                return;
+            }
+            
+            // Display file info
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            fileInfo.style.display = 'block';
+            convertBtn.style.display = 'block';
+            
+            // Reset status
+            status.textContent = '';
+            status.className = 'status';
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        convertBtn.addEventListener('click', () => {
+            if (!fileInput.files.length) {
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            // Show progress
+            progressContainer.style.display = 'block';
+            spinner.style.display = 'block';
+            convertBtn.disabled = true;
+            status.textContent = 'Enviando arquivo para conversão...';
+            status.className = 'status';
+            
+            // Simulate progress (since we don't have real progress events from the server)
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += 5;
+                if (progress > 90) {
+                    clearInterval(progressInterval);
+                }
+                progressBar.style.width = `${progress}%`;
+            }, 200);
+            
+            // Send the file to the server
+            fetch('https://serverdwf.onrender.com/convert', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Erro ${response.status}: ${response.statusText}`);
+                }
+                
+                clearInterval(progressInterval);
+                progressBar.style.width = '100%';
+                
+                // Get filename from Content-Disposition header or use a default name
+                let downloadFilename = 'convertido.kml';
+                const contentDisposition = response.headers.get('Content-Disposition');
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                    if (filenameMatch && filenameMatch[1]) {
+                        downloadFilename = filenameMatch[1].replace(/['"]/g, '');
+                    }
+                }
+                
+                // Ask where to save file
+                return response.blob().then(blob => {
+                    spinner.style.display = 'none';
+                    status.textContent = 'Conversão concluída com sucesso!';
+                    status.className = 'status success';
+                    
+                    // Create a download link and trigger browser's save dialog
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = downloadFilename;
+                    document.body.appendChild(a);
+                    a.click();
+                    
+                    // Clean up
+                    window.URL.revokeObjectURL(url);
+                    setTimeout(() => {
+                        document.body.removeChild(a);
+                    }, 100);
+                });
+            })
+            .catch(error => {
+                clearInterval(progressInterval);
+                spinner.style.display = 'none';
+                status.textContent = `Erro na conversão: ${error.message}`;
+                status.className = 'status error';
+                console.error('Error:', error);
+            })
+            .finally(() => {
+                convertBtn.disabled = false;
+            });
+        });
+    </script>
+</body>
+</html>
