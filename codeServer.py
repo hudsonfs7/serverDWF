@@ -1,23 +1,47 @@
 from flask import Flask, request, send_file
 import ezdxf
-from simplekml import Kml
+import simplekml
+from pyproj import Transformer
 import os
 
 app = Flask(__name__)
 
 # Função para converter DXF para KML
 def dxf_to_kml(dxf_filename, kml_filename):
+    print("Iniciando a leitura do arquivo DXF...")
     doc = ezdxf.readfile(dxf_filename)
-    kml = Kml()
+    msp = doc.modelspace()
+    kml = simplekml.Kml()
 
-    for entity in doc.modelspace():
-        if entity.dxftype() == 'LINE':
-            kml.newlinestring(name="Line", coords=[(entity.dxf.start.x, entity.dxf.start.y), (entity.dxf.end.x, entity.dxf.end.y)])
-        elif entity.dxftype() == 'LWPOLYLINE':
-            coords = [(point[0], point[1]) for point in entity.get_points()]
-            kml.newlinestring(name="Polyline", coords=coords)
+    # Converter de UTM Zona 24S (EPSG:32724) para WGS84 (EPSG:4326)
+    transformer = Transformer.from_crs("EPSG:32724", "EPSG:4326", always_xy=True)
 
+    print("Processando as entidades do DXF...")
+    for entity in msp.query("LINE LWPOLYLINE POLYLINE CIRCLE ARC POINT"):
+        if entity.dxftype() == "LINE":
+            x1, y1 = entity.dxf.start.x, entity.dxf.start.y
+            x2, y2 = entity.dxf.end.x, entity.dxf.end.y
+            lon1, lat1 = transformer.transform(x1, y1)
+            lon2, lat2 = transformer.transform(x2, y2)
+            kml.newlinestring(coords=[(lon1, lat1), (lon2, lat2)])
+        elif entity.dxftype() in ["LWPOLYLINE", "POLYLINE"]:
+            coords = []
+            for p in entity.get_points():
+                lon, lat = transformer.transform(p[0], p[1])
+                coords.append((lon, lat))
+            kml.newlinestring(coords=coords)
+        elif entity.dxftype() == "CIRCLE":
+            x, y = entity.dxf.center.x, entity.dxf.center.y
+            lon, lat = transformer.transform(x, y)
+            kml.newpoint(coords=[(lon, lat)])
+        elif entity.dxftype() == "POINT":
+            x, y = entity.dxf.location.x, entity.dxf.location.y
+            lon, lat = transformer.transform(x, y)
+            kml.newpoint(coords=[(lon, lat)])
+
+    print("Salvando o arquivo KML...")
     kml.save(kml_filename)
+    print(f"Arquivo KML salvo em: {kml_filename}")
 
 # Rota para fazer o upload do arquivo DXF e gerar o KML
 @app.route('/convert', methods=['POST'])
@@ -50,3 +74,4 @@ def convert():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
+
